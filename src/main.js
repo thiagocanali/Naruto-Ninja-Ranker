@@ -1,10 +1,15 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
-import router from "./router";
 import App from "./App.vue";
-import "@/assets/ranks.css"
+import router from "./router";
 
-createApp(App)
-  .use(createPinia())
-  .use(router)
-  .mount("#app");
+const app = createApp(App);
+const pinia = createPinia();
+app.use(pinia);
+app.use(router);
+app.mount("#app");
+
+// Carregar ninjas ao iniciar
+import { useNinjaStore } from "@/store/ninjaStore";
+const store = useNinjaStore();
+store.loadNinjas();

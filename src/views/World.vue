@@ -1,72 +1,60 @@
 <script setup>
-import { REGIONS } from "@/game/world";
+import { ref } from "vue";
 import { useNinjaStore } from "@/store/ninjaStore";
 
 const store = useNinjaStore();
+const log = ref([]);
+const exploring = ref(false);
 
-function explore(region) {
-  if (!store.unlockedRegions.includes(region.id)) {
-    alert("Região bloqueada! Complete as anteriores.");
-    return;
-  }
-  store.exploreRegion(region);
-  alert(`Você explorou a região: ${region.name} e ganhou ${region.rewardXP} XP!`);
+const enemies = [
+  { name: "Bandido Genin", power: 30, rewardXP: 10, rewardGold: 20 },
+  { name: "Ninja Chunin", power: 60, rewardXP: 20, rewardGold: 50 },
+  { name: "Ninja Jonin", power: 120, rewardXP: 50, rewardGold: 100 },
+  { name: "Sannin Lendário", power: 200, rewardXP: 100, rewardGold: 200 },
+];
+
+async function explore() {
+  if (store.team.length === 0) return;
+
+  exploring.value = true;
+  log.value = [];
+
+  const enemy = enemies[Math.floor(Math.random() * enemies.length)];
+  const teamPower = store.team.reduce((sum, ninja) => sum + store.ninjaPower(ninja), 0);
+
+  log.value.push(`🌎 Você encontrou: ${enemy.name} (Poder ${enemy.power})`);
+  log.value.push(`💪 Seu time tem poder ${Math.floor(teamPower)}`);
+
+  setTimeout(async () => {
+    if (teamPower >= enemy.power) {
+      log.value.push(`🎉 Vitória! Todos ganham ${enemy.rewardXP} XP e ${enemy.rewardGold} Gold`);
+      store.team.forEach((ninja) => {
+        ninja.xp += enemy.rewardXP;
+        ninja.level += Math.floor(ninja.xp / 100);
+        ninja.xp %= 100;
+      });
+      store.gold += enemy.rewardGold;
+
+      const newNinja = await store.lootRandomNinja();
+      log.value.push(`🆕 Você encontrou um novo ninja: ${newNinja.name}!`);
+    } else {
+      log.value.push(`💀 Derrota! Perdeu 20 Gold`);
+      store.gold = Math.max(store.gold - 20, 0);
+    }
+    exploring.value = false;
+  }, 1500);
 }
 </script>
 
 <template>
   <div class="world-container">
     <h1>🌍 Mundo Ninja</h1>
+    <button @click="explore" :disabled="store.team.length === 0 || exploring">🌟 Explorar</button>
 
-    <div v-for="region in REGIONS" :key="region.id" class="region-card">
-      <h3>{{ region.name }}</h3>
-      <p>Poder inimigo: {{ region.enemyPower }}</p>
+    <ul class="log">
+      <li v-for="(msg, idx) in log" :key="idx">{{ msg }}</li>
+    </ul>
 
-      <button
-        :disabled="!store.unlockedRegions.includes(region.id)"
-        @click="explore(region)"
-      >
-        Explorar
-      </button>
-    </div>
+    <p class="resources">💰 Gold: {{ store.gold }}</p>
   </div>
 </template>
-
-<style scoped>
-.world-container {
-  max-width: 600px;
-  margin: 20px auto;
-  background: #111827;
-  padding: 20px;
-  border-radius: 10px;
-  color: #e5e7eb;
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-.region-card {
-  background: #1e293b;
-  margin-bottom: 20px;
-  padding: 15px;
-  border-radius: 10px;
-}
-
-button {
-  background: #f97316;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  color: white;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background 0.3s;
-}
-
-button:disabled {
-  background: #64748b;
-  cursor: not-allowed;
-}
-
-button:hover:not(:disabled) {
-  background: #fb923c;
-}
-</style>
