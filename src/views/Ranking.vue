@@ -1,24 +1,18 @@
-<template>
-  <div>
-    <button @click="store.calculateRanking()">Gerar Ranking Ninja</button>
-    <RankingTable :ranking="store.ranking" />
-  </div>
-</template>
-
 <script setup>
-import { useNinjaStore } from "../store/ninjaStore";
-import RankingTable from "../components/RankingTable.vue";
+import { useNinjaStore } from "@/store/ninjaStore"
+import { calculatePower } from "@/game/formulas"
 
-const store = useNinjaStore();
+const store = useNinjaStore()
 </script>
 
-<style scoped>
-button {
-  background: linear-gradient(90deg, #f97316, #fb923c);
-  border: none;
-  padding: 10px 20px;
-  margin-bottom: 20px;
-  font-weight: bold;
-  cursor: pointer;
-}
-</style>
+<template>
+  <h1>Ranking Ninja</h1>
+
+  <ol>
+    <li v-for="ninja in store.rankedNinjas" :key="ninja.id">
+      {{ ninja.name }} —
+      {{ ninja.rank }} —
+      Power: {{ Math.floor(calculatePower(ninja.stats)) }}
+    </li>
+  </ol>
+</template>

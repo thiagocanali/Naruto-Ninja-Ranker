@@ -1,29 +1,35 @@
-<template>
-  <div class="grid">
-    <CharacterCard
-      v-for="c in store.characters"
-      :key="c.id"
-      :character="c"
-    />
-  </div>
-
-  <ComparePanel />
-  <TeamBuilder />
-</template>
-
 <script setup>
-import { useNinjaStore } from "../store/ninjaStore";
-import CharacterCard from "../components/CharacterCard.vue";
-import ComparePanel from "../components/ComparePanel.vue";
-import TeamBuilder from "../components/TeamBuilder.vue";
+import { useNinjaStore } from "@/store/ninjaStore"
+import { calculatePower, xpToNextLevel } from "@/game/formulas"
 
-const store = useNinjaStore();
+const store = useNinjaStore()
 </script>
 
+<template>
+  <h1>Ninjas</h1>
+
+  <div v-for="ninja in store.ninjas" :key="ninja.id" class="card">
+    <h2>{{ ninja.name }}</h2>
+    <p>Rank: {{ ninja.rank || "Genin" }}</p>
+    <p>Level: {{ ninja.level }}</p>
+    <p>Power: {{ Math.floor(calculatePower(ninja.stats)) }}</p>
+
+    <progress
+      :value="ninja.xp"
+      :max="xpToNextLevel(ninja.level)"
+    />
+
+    <br />
+    <button @click="store.gainXP(ninja.id, 50)">
+      Treinar (+50 XP)
+    </button>
+  </div>
+</template>
+
 <style scoped>
-.grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
+.card {
+  border: 1px solid #444;
+  padding: 12px;
+  margin-bottom: 12px;
 }
 </style>

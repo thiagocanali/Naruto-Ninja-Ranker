@@ -1,63 +1,71 @@
-import { defineStore } from "pinia";
-import { characters } from "../data/characters";
+import { defineStore } from "pinia"
+import { characters } from "@/data/characters"
+import { applyBonuses, calculatePower, xpToNextLevel } from "@/game/formulas"
+import { calculateRank } from "@/game/ranks"
+import { BOSSES } from "@/game/bosses"
+import { simulateBattle } from "@/game/battle"
 
 export const useNinjaStore = defineStore("ninja", {
   state: () => ({
-    characters,
-    ranking: JSON.parse(localStorage.getItem("ranking")) || [],
-    team: []
+    ninjas: JSON.parse(localStorage.getItem("ninjas")) || characters,
+    team: [],
+    campaignStage: 0
   }),
 
+  getters: {
+    ninjaPower: () => ninja =>
+      calculatePower(
+        applyBonuses(
+          ninja.stats,
+          ninja.equipment,
+          ninja.skills,
+          ninja.class
+        )
+      )
+  },
+
   actions: {
-    calculateScore(ninja) {
-      let score =
-        ninja.stats.ninjutsu * 1.2 +
-        ninja.stats.taijutsu * 1.1 +
-        ninja.stats.genjutsu +
-        ninja.stats.intelligence * 1.1 +
-        ninja.stats.chakra * 1.3;
-
-      if (ninja.clan === "Uchiha") score += 5;
-      if (ninja.clan === "Uzumaki") score += 6;
-
-      if (ninja.elements.includes("Fogo")) score += 2;
-      if (ninja.elements.includes("Vento")) score += 2;
-
-      return Math.round(score);
+    save() {
+      localStorage.setItem("ninjas", JSON.stringify(this.ninjas))
     },
 
-    calculateRanking() {
-      this.ranking = this.characters
-        .map(n => ({ ...n, total: this.calculateScore(n) }))
-        .sort((a, b) => b.total - a.total);
+    gainXP(id, amount) {
+      const ninja = this.ninjas.find(n => n.id === id)
+      if (!ninja) return
 
-      localStorage.setItem("ranking", JSON.stringify(this.ranking));
-    },
+      ninja.xp += amount
 
-    addToTeam(ninja) {
-      if (this.team.length < 3 && !this.team.includes(ninja)) {
-        this.team.push(ninja);
+      while (ninja.xp >= xpToNextLevel(ninja.level)) {
+        ninja.xp -= xpToNextLevel(ninja.level)
+        ninja.level++
+        ninja.skillPoints++
       }
+
+      ninja.rank = calculateRank(
+        ninja.level,
+        this.ninjaPower(ninja)
+      )
+
+      this.save()
     },
 
-    removeFromTeam(ninja) {
-      this.team = this.team.filter(n => n !== ninja);
-    },
-
-    calculateTeamScore() {
-      let base = this.team.reduce(
-        (sum, n) => sum + this.calculateScore(n),
+    fightBoss(boss) {
+      let teamPower = this.team.reduce(
+        (sum, n) => sum + this.ninjaPower(n),
         0
-      );
+      )
 
-      const clans = this.team.map(n => n.clan);
-      const elements = this.team.flatMap(n => n.elements);
+      for (const phase of boss.phases) {
+        const win = simulateBattle(teamPower, phase.power)
+        if (!win) {
+          alert("Derrota na batalha!")
+          return
+        }
+        this.team.forEach(n => this.gainXP(n.id, phase.rewardXP))
+      }
 
-      // 🔥 sinergias
-      if (new Set(clans).size === 1) base += 15; // mesmo clã
-      if (new Set(elements).size >= 3) base += 10; // diversidade
-
-      return base;
+      this.campaignStage++
+      alert("Boss derrotado! Campanha avançou!")
     }
   }
-});
+})
