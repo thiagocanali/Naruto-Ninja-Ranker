@@ -2,6 +2,7 @@
 import { computed, onMounted } from "vue";
 import { useNinjaStore } from "@/store/ninjaStore";
 import { useRouter } from "vue-router";
+import CharacterDetails from "@/components/CharacterDetails.vue";
 
 const store = useNinjaStore();
 const router = useRouter();
@@ -77,6 +78,7 @@ function goTo(path) {
       <button @click="goTo('/ranking')">🏆 Ranking</button>
     </section>
   </div>
+  <CharacterDetails v-if="store.selectedCharacter" />
 </template>
 
 <style scoped>
