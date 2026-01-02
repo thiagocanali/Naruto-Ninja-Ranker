@@ -1,6 +1,6 @@
 // src/store/ninjaStore.js
 import { defineStore } from "pinia";
-import { calculatePower } from "@/game/formulas";
+import { calculatePower, gainXp } from "@/game/formulas";
 import { calculateRank } from "@/game/ranks";
 
 export const useNinjaStore = defineStore("ninjaStore", {
@@ -15,13 +15,15 @@ export const useNinjaStore = defineStore("ninjaStore", {
 
   getters: {
     ninjaPower: () => (ninja) => {
-      return calculatePower(ninja.stats || {
-        chakra: 0,
-        ninjutsu: 0,
-        taijutsu: 0,
-        genjutsu: 0,
-        intelligence: 0
-      });
+      return calculatePower(
+        ninja.stats || {
+          chakra: 0,
+          ninjutsu: 0,
+          taijutsu: 0,
+          genjutsu: 0,
+          intelligence: 0,
+        }
+      );
     },
 
     teamPower(state) {
@@ -39,6 +41,11 @@ export const useNinjaStore = defineStore("ninjaStore", {
 
     closeCharacter() {
       this.selectedCharacter = null;
+    },
+
+    gainXpToNinja(ninja, amount) {
+      gainXp(ninja, amount);
+      ninja.rank = calculateRank(ninja.level);
     },
 
     async fetchNinjas(page = 1) {

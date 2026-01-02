@@ -1,4 +1,6 @@
+// src/router/index.js
 import { createRouter, createWebHistory } from "vue-router";
+
 import Home from "@/views/Home.vue";
 import Ranking from "@/views/Ranking.vue";
 import Missions from "@/views/Missions.vue";
@@ -7,8 +9,8 @@ import World from "@/views/World.vue";
 import Boss from "@/views/Boss.vue";
 import TeamBuilder from "@/views/TeamBuilder.vue";
 
-export default createRouter({
-  history: createWebHistory(),
+const router = createRouter({
+  history: createWebHistory("/Naruto-Ninja-Ranker/"),
   routes: [
     { path: "/", component: Home },
     { path: "/ranking", component: Ranking },
@@ -19,3 +21,5 @@ export default createRouter({
     { path: "/team", component: TeamBuilder },
   ],
 });
+
+export default router;

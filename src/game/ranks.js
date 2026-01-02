@@ -1,19 +1,15 @@
+// src/game/ranks.js
+
 export const RANKS = [
-  { name: "Genin", minLevel: 1, minPower: 0 },
-  { name: "Chunin", minLevel: 10, minPower: 400 },
-  { name: "Jonin", minLevel: 20, minPower: 800 },
-  { name: "Anbu", minLevel: 30, minPower: 1300 },
-  { name: "Kage", minLevel: 40, minPower: 2000 }
-]
+  { name: "Genin", minLevel: 1 },
+  { name: "Chunin", minLevel: 10 },
+  { name: "Jonin", minLevel: 25 },
+  { name: "ANBU", minLevel: 40 },
+  { name: "Kage", minLevel: 60 },
+];
 
-export function calculateRank(level, power) {
-  let currentRank = "Genin"
-
-  RANKS.forEach(rank => {
-    if (level >= rank.minLevel && power >= rank.minPower) {
-      currentRank = rank.name
-    }
-  })
-
-  return currentRank
+export function calculateRank(level) {
+  return [...RANKS]
+    .reverse()
+    .find((rank) => level >= rank.minLevel)?.name || "Genin";
 }
