@@ -1,190 +1,159 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useNinjaStore } from "@/store/ninjaStore";
 import { SKILLS } from "@/game/skills";
 
 const store = useNinjaStore();
-const selectedId = ref("");
 
-// garante que os ninjas existam ao abrir a tela
-onMounted(() => {
+const selectedNinjaId = ref("");
+const selectedSkillId = ref("");
+
+/* =====================
+   LOAD GARANTIDO
+===================== */
+onMounted(async () => {
   if (store.ninjas.length === 0) {
-    store.fetchNinjas();
+    await store.fetchNinjas();
   }
 });
 
+/* =====================
+   COMPUTEDS
+===================== */
 const selectedNinja = computed(() =>
-  store.ninjas.find((n) => n.id === selectedId.value)
+  store.ninjas.find(n => n.id === Number(selectedNinjaId.value))
 );
 
-function buySkill(skill) {
-  if (!selectedNinja.value) return;
+const selectedSkill = computed(() =>
+  SKILLS.find(s => s.id === selectedSkillId.value)
+);
 
-  const ninja = selectedNinja.value;
+const canLearn = computed(() => {
+  if (!selectedNinja.value || !selectedSkill.value) return false;
 
-  if (ninja.skillPoints < skill.cost) return;
-  if (ninja.skills.some((s) => s.id === skill.id)) return;
+  return (
+    selectedNinja.value.skillPoints >= selectedSkill.value.cost &&
+    !selectedNinja.value.skills.some(s => s.id === selectedSkill.value.id)
+  );
+});
 
-  ninja.skillPoints -= skill.cost;
-  ninja.skills.push(skill);
+/* =====================
+   ACTION
+===================== */
+function learnSkill() {
+  if (!canLearn.value) return;
 
-  Object.entries(skill.bonus).forEach(([stat, value]) => {
-    ninja.stats[stat] += value;
+  selectedNinja.value.skills.push(selectedSkill.value);
+
+  Object.entries(selectedSkill.value.bonus).forEach(([key, value]) => {
+    selectedNinja.value.stats[key] += value;
   });
+
+  selectedNinja.value.skillPoints -= selectedSkill.value.cost;
+
+  alert(
+    `✅ ${selectedNinja.value.name} aprendeu ${selectedSkill.value.name}!`
+  );
+
+  selectedSkillId.value = "";
 }
 </script>
 
 <template>
-  <div class="skills">
-    <h1>🧠 Habilidades Ninja</h1>
+  <div class="skills-container">
+    <h1>🌀 Árvores de Habilidades</h1>
 
-    <!-- SELECT -->
-    <select
-      v-model="selectedId"
-      :disabled="store.loading || store.ninjas.length === 0"
-    >
-      <option disabled value="">
-        {{
-          store.loading
-            ? "Carregando ninjas..."
-            : store.ninjas.length === 0
-            ? "Nenhum ninja disponível"
-            : "Escolha um ninja"
-        }}
-      </option>
+    <div v-if="store.loading">Carregando ninjas...</div>
 
-      <option
-        v-for="ninja in store.ninjas"
-        :key="ninja.id"
-        :value="ninja.id"
-      >
-        {{ ninja.name }} — Lv {{ ninja.level }} ({{ ninja.rank }})
-      </option>
-    </select>
+    <div v-else class="panel">
+      <!-- SELECT NINJA -->
+      <div class="box">
+        <h3>Ninja</h3>
+        <select v-model="selectedNinjaId">
+          <option disabled value="">Selecione um ninja</option>
+          <option
+            v-for="ninja in store.ninjas"
+            :key="ninja.id"
+            :value="ninja.id"
+          >
+            {{ ninja.name }} (SP: {{ ninja.skillPoints }})
+          </option>
+        </select>
+      </div>
 
-    <!-- PAINEL DO NINJA -->
-    <div v-if="selectedNinja" class="panel">
-      <h2>{{ selectedNinja.name }}</h2>
+      <!-- SELECT SKILL -->
+      <div class="box" v-if="selectedNinja">
+        <h3>Habilidade</h3>
+        <select v-model="selectedSkillId">
+          <option disabled value="">Selecione uma skill</option>
+          <option
+            v-for="skill in SKILLS"
+            :key="skill.id"
+            :value="skill.id"
+            :disabled="
+              selectedNinja.skills.some(s => s.id === skill.id)
+            "
+          >
+            {{ skill.name }} ({{ skill.cost }} SP)
+          </option>
+        </select>
 
-      <div class="info">
-        <span>Rank: <strong>{{ selectedNinja.rank }}</strong></span>
-        <span>Level: {{ selectedNinja.level }}</span>
-        <span>XP: {{ selectedNinja.xp }}</span>
-        <span>⭐ Pontos: {{ selectedNinja.skillPoints }}</span>
+        <p v-if="selectedSkill" class="desc">
+          {{ selectedSkill.description }}
+        </p>
+
+        <button @click="learnSkill" :disabled="!canLearn">
+          Aprender Skill
+        </button>
       </div>
 
       <!-- STATS -->
-      <h3>📊 Status</h3>
-      <ul class="stats">
-        <li v-for="(value, key) in selectedNinja.stats" :key="key">
-          {{ key }}: <strong>{{ value }}</strong>
-        </li>
-      </ul>
-
-      <!-- SKILLS -->
-      <h3>✨ Habilidades</h3>
-
-      <div class="skill-list">
-        <div
-          v-for="skill in SKILLS"
-          :key="skill.id"
-          class="skill-card"
-          :class="{
-            owned: selectedNinja.skills.some((s) => s.id === skill.id),
-          }"
-        >
-          <h4>{{ skill.name }}</h4>
-          <p>{{ skill.description }}</p>
-
-          <small>
-            Custo: {{ skill.cost }} ponto(s)
-          </small>
-
-          <button
-            @click="buySkill(skill)"
-            :disabled="
-              selectedNinja.skillPoints < skill.cost ||
-              selectedNinja.skills.some((s) => s.id === skill.id)
-            "
-          >
-            {{
-              selectedNinja.skills.some((s) => s.id === skill.id)
-                ? "Aprendida"
-                : "Aprender"
-            }}
-          </button>
-        </div>
+      <div class="box" v-if="selectedNinja">
+        <h3>Status</h3>
+        <ul>
+          <li v-for="(value, key) in selectedNinja.stats" :key="key">
+            {{ key }}: {{ value }}
+          </li>
+        </ul>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.skills {
-  max-width: 960px;
-  margin: auto;
-  padding: 24px;
+.skills-container {
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 20px;
+  background: #111827;
+  border-radius: 12px;
   color: #e5e7eb;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 h1 {
-  margin-bottom: 16px;
+  color: #f97316;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.box {
+  background: #1e293b;
+  padding: 15px;
+  border-radius: 10px;
 }
 
 select {
   width: 100%;
-  padding: 10px;
-  margin-bottom: 20px;
-  border-radius: 8px;
-  background: #020617;
-  color: #e5e7eb;
-  border: 1px solid #334155;
-}
-
-.panel {
-  background: #020617;
-  padding: 20px;
-  border-radius: 16px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
-}
-
-.info {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.skill-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
-}
-
-.skill-card {
-  background: #0f172a;
-  padding: 16px;
-  border-radius: 14px;
-  transition: transform 0.25s ease;
-}
-
-.skill-card:hover {
-  transform: translateY(-4px);
-}
-
-.skill-card.owned {
-  opacity: 0.55;
-}
-
-.skill-card h4 {
-  margin-bottom: 6px;
+  padding: 8px;
+  margin-top: 8px;
+  border-radius: 6px;
 }
 
 button {
@@ -193,14 +162,24 @@ button {
   background: #f97316;
   border: none;
   padding: 8px;
-  border-radius: 10px;
+  border-radius: 6px;
+  color: white;
   font-weight: bold;
-  color: #020617;
   cursor: pointer;
 }
 
 button:disabled {
-  background: #475569;
+  background: #64748b;
   cursor: not-allowed;
+}
+
+.desc {
+  font-size: 14px;
+  margin-top: 8px;
+  color: #cbd5f5;
+}
+
+ul {
+  padding-left: 16px;
 }
 </style>

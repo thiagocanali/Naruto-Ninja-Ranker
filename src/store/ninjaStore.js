@@ -14,7 +14,6 @@ export const useNinjaStore = defineStore("ninjaStore", {
 
   getters: {
     ninjaPower: () => (ninja) => {
-      if (!ninja.stats) return 0;
       return calculatePower(ninja.stats);
     },
 
@@ -27,6 +26,20 @@ export const useNinjaStore = defineStore("ninjaStore", {
   },
 
   actions: {
+    /* =========================
+       SELEÇÃO
+    ========================= */
+    selectCharacter(ninja) {
+      this.selectedCharacter = ninja;
+    },
+
+    closeCharacter() {
+      this.selectedCharacter = null;
+    },
+
+    /* =========================
+       FETCH API
+    ========================= */
     async fetchNinjas(page = 1) {
       this.loading = true;
       this.error = null;
@@ -42,13 +55,16 @@ export const useNinjaStore = defineStore("ninjaStore", {
           name: ninja.name,
           image: ninja.images?.[0] || "",
           clan: ninja.clan || "Desconhecido",
+
           class: "NINJUTSU",
           level: 1,
           xp: 0,
           rank: "Genin",
-          skillPoints: 0,
+          skillPoints: 1,
+
           skills: [],
           equipment: [],
+
           stats: {
             chakra: 60,
             ninjutsu: 60,
@@ -65,21 +81,9 @@ export const useNinjaStore = defineStore("ninjaStore", {
       }
     },
 
-    gainXpToNinja(ninja, amount) {
-      ninja.xp += amount;
-
-      while (ninja.xp >= xpToNextLevel(ninja.level)) {
-        ninja.xp -= xpToNextLevel(ninja.level);
-        ninja.level++;
-        ninja.skillPoints++;
-      }
-
-      ninja.rank = calculateRank(
-        ninja.level,
-        this.ninjaPower(ninja)
-      );
-    },
-
+    /* =========================
+       TIME
+    ========================= */
     addToTeam(ninja) {
       if (
         this.team.length < 3 &&
@@ -93,12 +97,22 @@ export const useNinjaStore = defineStore("ninjaStore", {
       this.team = this.team.filter((n) => n.id !== ninja.id);
     },
 
-    selectCharacter(character) {
-      this.selectedCharacter = character;
-    },
+    /* =========================
+       XP / LEVEL / RANK
+    ========================= */
+    gainXP(ninja, amount) {
+      ninja.xp += amount;
 
-    closeCharacter() {
-      this.selectedCharacter = null;
+      while (ninja.xp >= xpToNextLevel(ninja.level)) {
+        ninja.xp -= xpToNextLevel(ninja.level);
+        ninja.level++;
+        ninja.skillPoints++;
+
+        ninja.rank = calculateRank(
+          ninja.level,
+          this.ninjaPower(ninja)
+        );
+      }
     },
   },
 });

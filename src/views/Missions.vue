@@ -1,63 +1,68 @@
+<script setup>
+import { MISSIONS } from "@/game/missions";
+import { useNinjaStore } from "@/store/ninjaStore";
+import { useRouter } from "vue-router";
+
+const store = useNinjaStore();
+const router = useRouter();
+
+function start(mission) {
+  store.startMission(mission);
+  router.push("/battle");
+}
+</script>
+
 <template>
   <div class="missions">
     <h1>📜 Missões</h1>
 
-    <div
-      v-for="mission in missions"
-      :key="mission.id"
-      class="mission"
-    >
-      <h3>{{ mission.name }}</h3>
-      <p>Nível recomendado: {{ mission.level }}</p>
-      <p>Inimigos: {{ mission.enemies }}</p>
-      <p>XP: {{ mission.xp }} | Ouro: {{ mission.gold }}</p>
-
-      <button
-        :disabled="store.team.length === 0"
-        @click="completeMission(mission)"
+    <div class="list">
+      <div
+        v-for="m in MISSIONS"
+        :key="m.id"
+        class="mission"
+        :class="{ boss: m.boss }"
       >
-        Iniciar Missão
-      </button>
+        <h3>{{ m.name }}</h3>
+        <p>{{ m.description }}</p>
+        <small>XP: {{ m.reward.xp }} | Gold: {{ m.reward.gold }}</small>
+
+        <button @click="start(m)">Iniciar</button>
+      </div>
     </div>
   </div>
 </template>
 
-<script setup>
-import { MISSIONS } from "@/game/missions";
-import { useNinjaStore } from "@/store/ninjaStore";
-
-const store = useNinjaStore();
-const missions = MISSIONS;
-
-function completeMission(mission) {
-  store.team.forEach((ninja) => {
-    store.gainXpToNinja(ninja, mission.xp);
-  });
-
-  store.gold += mission.gold;
-  alert(`Missão concluída! +${mission.gold} ouro`);
-}
-</script>
-
 <style scoped>
 .missions {
-  padding: 20px;
-  color: white;
+  max-width: 800px;
+  margin: auto;
+  padding: 24px;
+  color: #e5e7eb;
+}
+
+.list {
+  display: grid;
+  gap: 16px;
 }
 
 .mission {
   background: #020617;
-  padding: 14px;
-  border-radius: 10px;
-  margin-bottom: 12px;
+  padding: 16px;
+  border-radius: 14px;
+}
+
+.mission.boss {
+  border: 2px solid #ef4444;
 }
 
 button {
+  margin-top: 10px;
   background: #22c55e;
   border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
+  padding: 8px 14px;
+  border-radius: 10px;
   font-weight: bold;
+  cursor: pointer;
 }
 </style>
