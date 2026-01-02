@@ -1,23 +1,40 @@
-export const SKILLS = [
-  {
-    id: "chakra_boost",
-    name: "Controle de Chakra",
-    description: "+15 Chakra",
-    cost: 1,
-    bonus: { chakra: 15 }
+// src/game/skills.js
+
+export const SKILLS = {
+  FIREBALL: {
+    id: "FIREBALL",
+    name: "Bola de Fogo",
+    cost: 20,
+    multiplier: 1.6,
+    description: "Um poderoso jutsu de fogo.",
   },
-  {
-    id: "taijutsu_training",
-    name: "Treino Corporal",
-    description: "+12 Taijutsu",
-    cost: 1,
-    bonus: { taijutsu: 12 }
+
+  CHIDORI: {
+    id: "CHIDORI",
+    name: "Chidori",
+    cost: 30,
+    multiplier: 2.0,
+    description: "Ataque concentrado de chakra elétrico.",
   },
-  {
-    id: "ninjutsu_focus",
-    name: "Foco em Ninjutsu",
-    description: "+18 Ninjutsu",
-    cost: 2,
-    bonus: { ninjutsu: 18 }
-  }
-]
+
+  SHADOW_CLONE: {
+    id: "SHADOW_CLONE",
+    name: "Clone das Sombras",
+    cost: 15,
+    multiplier: 1.2,
+    description: "Confunde o inimigo e causa dano leve.",
+  },
+};
+
+export function useSkill(attacker, defender, skill) {
+  if (attacker.chakra < skill.cost) return 0;
+
+  attacker.chakra -= skill.cost;
+  const base = attacker.stats.ninjutsu * skill.multiplier;
+  const damage = Math.floor(base / 10);
+
+  defender.hp -= damage;
+  if (defender.hp < 0) defender.hp = 0;
+
+  return damage;
+}

@@ -1,21 +1,19 @@
-export const REGIONS = [
+// src/game/world.js
+
+export const ZONES = [
   {
     id: 1,
     name: "Vila da Folha",
-    enemyPower: 300,
-    rewardXP: 80
+    minLevel: 1,
   },
   {
     id: 2,
     name: "Floresta da Morte",
-    enemyPower: 700,
-    rewardXP: 200
+    minLevel: 10,
   },
   {
     id: 3,
-    name: "Quartel da Akatsuki",
-    enemyPower: 1500,
-    rewardXP: 500,
-    boss: true
-  }
-]
+    name: "Vila do Som",
+    minLevel: 25,
+  },
+];

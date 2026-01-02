@@ -1,30 +1,28 @@
+// src/game/missions.js
+
 export const MISSIONS = [
   {
     id: 1,
-    name: "Missão de Patrulha",
-    difficulty: "D",
-    requiredPower: 150,
-    rewardXP: 50
+    name: "Patrulha na Vila",
+    level: 1,
+    enemies: 1,
+    xp: 80,
+    gold: 30,
   },
   {
     id: 2,
-    name: "Proteção de Vila",
-    difficulty: "C",
-    requiredPower: 350,
-    rewardXP: 120
+    name: "Escolta de Comerciante",
+    level: 5,
+    enemies: 2,
+    xp: 150,
+    gold: 60,
   },
   {
     id: 3,
-    name: "Escolta Importante",
-    difficulty: "B",
-    requiredPower: 700,
-    rewardXP: 250
+    name: "Ataque de Ninjas Renegados",
+    level: 10,
+    enemies: 3,
+    xp: 300,
+    gold: 120,
   },
-  {
-    id: 4,
-    name: "Combate de Alto Risco",
-    difficulty: "A",
-    requiredPower: 1200,
-    rewardXP: 450
-  }
-]
+];

@@ -1,6 +1,5 @@
-// src/store/ninjaStore.js
 import { defineStore } from "pinia";
-import { calculatePower, gainXp } from "@/game/formulas";
+import { calculatePower, xpToNextLevel } from "@/game/formulas";
 import { calculateRank } from "@/game/ranks";
 
 export const useNinjaStore = defineStore("ninjaStore", {
@@ -15,15 +14,8 @@ export const useNinjaStore = defineStore("ninjaStore", {
 
   getters: {
     ninjaPower: () => (ninja) => {
-      return calculatePower(
-        ninja.stats || {
-          chakra: 0,
-          ninjutsu: 0,
-          taijutsu: 0,
-          genjutsu: 0,
-          intelligence: 0,
-        }
-      );
+      if (!ninja.stats) return 0;
+      return calculatePower(ninja.stats);
     },
 
     teamPower(state) {
@@ -35,19 +27,6 @@ export const useNinjaStore = defineStore("ninjaStore", {
   },
 
   actions: {
-    selectCharacter(character) {
-      this.selectedCharacter = character;
-    },
-
-    closeCharacter() {
-      this.selectedCharacter = null;
-    },
-
-    gainXpToNinja(ninja, amount) {
-      gainXp(ninja, amount);
-      ninja.rank = calculateRank(ninja.level);
-    },
-
     async fetchNinjas(page = 1) {
       this.loading = true;
       this.error = null;
@@ -86,6 +65,21 @@ export const useNinjaStore = defineStore("ninjaStore", {
       }
     },
 
+    gainXpToNinja(ninja, amount) {
+      ninja.xp += amount;
+
+      while (ninja.xp >= xpToNextLevel(ninja.level)) {
+        ninja.xp -= xpToNextLevel(ninja.level);
+        ninja.level++;
+        ninja.skillPoints++;
+      }
+
+      ninja.rank = calculateRank(
+        ninja.level,
+        this.ninjaPower(ninja)
+      );
+    },
+
     addToTeam(ninja) {
       if (
         this.team.length < 3 &&
@@ -97,6 +91,14 @@ export const useNinjaStore = defineStore("ninjaStore", {
 
     removeFromTeam(ninja) {
       this.team = this.team.filter((n) => n.id !== ninja.id);
+    },
+
+    selectCharacter(character) {
+      this.selectedCharacter = character;
+    },
+
+    closeCharacter() {
+      this.selectedCharacter = null;
     },
   },
 });
