@@ -1,160 +1,303 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useNinjaStore } from "@/store/ninjaStore";
-import { JUTSUS } from "@/game/jutsus";
-import { calculateDamage } from "@/game/combat";
+import { characters } from "@/data/characters";
 
 const store = useNinjaStore();
 
-const player = ref(null);
-const enemy = ref(null);
+/* =====================
+   STATE
+===================== */
 const log = ref([]);
 const turn = ref("player");
 
-onMounted(() => {
-  if (store.team.length === 0) {
-    store.fetchNinjas().then(() => {
-      store.addToTeam(store.ninjas[0]);
-      startBattle();
-    });
-  } else {
-    startBattle();
-  }
-});
+const playerIndex = ref(0);
+const enemyIndex = ref(0);
+const enemies = ref([]);
 
-function startBattle() {
-  player.value = {
-    ...store.team[0],
-    hp: 120,
-    chakra: 100,
-  };
+/* =====================
+   HELPERS
+===================== */
+const maxHp = n => 100 + n.level * 10;
+const maxChakra = n => 100 + n.stats.chakra * 0.2;
 
-  enemy.value = { ...store.currentMission.enemy };
-
-  log.value = ["⚔️ A batalha começou!"];
-  turn.value = "player";
+function animateValue(obj, key, displayKey) {
+  if (!obj) return;
+  const interval = setInterval(() => {
+    if (obj[displayKey] === obj[key]) {
+      clearInterval(interval);
+      return;
+    }
+    obj[displayKey] += obj[displayKey] < obj[key] ? 1 : -1;
+  }, 10);
 }
 
-function useJutsu(jutsu) {
+/* =====================
+   COMPUTEDS
+===================== */
+const safeTeam = computed(() =>
+  store.team.map(n => ({
+    ...n,
+    battle: n.battle ?? {
+      hp: maxHp(n),
+      hpDisplay: maxHp(n),
+      chakra: maxChakra(n),
+      chakraDisplay: maxChakra(n),
+      ultimateUsed: false,
+    },
+  }))
+);
+
+const activePlayer = computed(() => safeTeam.value[playerIndex.value]);
+const activeEnemy = computed(() => enemies.value[enemyIndex.value]);
+
+/* =====================
+   INIT
+===================== */
+onMounted(resetBattle);
+
+/* =====================
+   RESET
+===================== */
+function resetBattle() {
+  log.value = [];
+  turn.value = "player";
+  playerIndex.value = 0;
+  enemyIndex.value = 0;
+
+  // Player
+  store.team.forEach(n => {
+    n.battle = {
+      hp: maxHp(n),
+      hpDisplay: maxHp(n),
+      chakra: maxChakra(n),
+      chakraDisplay: maxChakra(n),
+      ultimateUsed: false,
+    };
+  });
+
+  // Enemies (reais, excluindo o time)
+  const teamIds = store.team.map(n => n.id);
+
+  enemies.value = characters
+    .filter(c => !teamIds.includes(c.id))
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 3)
+    .map(c => {
+      const hp = 90 + c.level * 8;
+      return {
+        ...c,
+        battle: {
+          hp,
+          hpDisplay: hp,
+          maxHp: hp,
+          power: 18 + c.level * 3,
+        },
+      };
+    });
+}
+
+/* =====================
+   ACTIONS
+===================== */
+function basicAttack() {
   if (turn.value !== "player") return;
-  if (player.value.chakra < jutsu.cost) return;
 
-  player.value.chakra -= jutsu.cost;
-  const dmg = calculateDamage(player.value, jutsu);
-  enemy.value.hp -= dmg;
+  const dmg =
+    activePlayer.value.stats.taijutsu +
+    Math.floor(Math.random() * 12);
 
-  log.value.push(
-    `🌀 ${player.value.name} usou ${jutsu.name} causando ${dmg} de dano`
-  );
+  activeEnemy.value.battle.hp -= dmg;
+  animateValue(activeEnemy.value.battle, "hp", "hpDisplay");
 
-  if (enemy.value.hp <= 0) {
-    victory();
-    return;
+  log.value.push(`🗡️ ${activePlayer.value.name} causou ${dmg} de dano`);
+  endPlayerTurn();
+}
+
+function ultimateAttack() {
+  const n = activePlayer.value;
+  if (n.battle.ultimateUsed) return;
+
+  const dmg =
+    n.stats.ninjutsu * 2 +
+    n.level * 5 +
+    Math.floor(Math.random() * 25);
+
+  n.battle.ultimateUsed = true;
+
+  activeEnemy.value.battle.hp -= dmg;
+  animateValue(activeEnemy.value.battle, "hp", "hpDisplay");
+
+  log.value.push(`☄️ ${n.name} usou um JUTSU SUPREMO! (${dmg})`);
+  endPlayerTurn();
+}
+
+/* =====================
+   TURN FLOW
+===================== */
+function endPlayerTurn() {
+  if (activeEnemy.value.battle.hp <= 0) {
+    log.value.push(`💀 ${activeEnemy.value.name} foi derrotado`);
+    enemyIndex.value++;
+    if (enemyIndex.value >= enemies.value.length) return victory();
   }
 
   turn.value = "enemy";
-  setTimeout(enemyTurn, 800);
+  setTimeout(enemyTurn, 900);
 }
 
 function enemyTurn() {
-  const dmg = Math.floor(20 + Math.random() * 15);
-  player.value.hp -= dmg;
+  const dmg =
+    activeEnemy.value.battle.power +
+    Math.floor(Math.random() * 8);
 
-  log.value.push(`💥 Inimigo atacou causando ${dmg} de dano`);
+  activePlayer.value.battle.hp -= dmg;
+  animateValue(activePlayer.value.battle, "hp", "hpDisplay");
 
-  if (player.value.hp <= 0) {
-    log.value.push("☠️ Você foi derrotado...");
-    return;
+  log.value.push(`💥 ${activeEnemy.value.name} atacou (${dmg})`);
+
+  if (activePlayer.value.battle.hp <= 0) {
+    log.value.push(`☠️ ${activePlayer.value.name} caiu`);
+    playerIndex.value++;
   }
 
   turn.value = "player";
 }
 
 function victory() {
-  log.value.push("🏆 Missão concluída!");
-  store.gainXpToNinja(store.team[0], store.currentMission.reward.xp);
-  store.finishMission(store.currentMission.reward);
+  log.value.push("🎉 VITÓRIA!");
+  store.team.forEach(n => store.gainXP(n, 80));
+  store.gold += 120;
 }
-
 </script>
 
 <template>
   <div class="battle">
     <h1>⚔️ Batalha</h1>
 
-    <div class="arena" v-if="player && enemy">
-      <div class="fighter">
-        <h2>{{ player.name }}</h2>
-        <p>❤️ HP: {{ player.hp }}</p>
-        <p>🔵 Chakra: {{ player.chakra }}</p>
+    <!-- PLAYER -->
+    <section class="side">
+      <h2>Seu Time</h2>
+      <div class="cards">
+        <div
+          v-for="(n, i) in safeTeam"
+          :key="n.id"
+          class="card"
+          :class="{ active: i === playerIndex }"
+        >
+          <img :src="n.image" />
+          <h3>{{ n.name }}</h3>
 
-        <div class="jutsus">
-          <button v-for="jutsu in JUTSUS" :key="jutsu.id" @click="useJutsu(jutsu)"
-            :disabled="turn !== 'player' || player.chakra < jutsu.cost">
-            {{ jutsu.name }} ({{ jutsu.cost }})
-          </button>
+          <div class="bar hp">
+            <div
+              class="fill"
+              :style="{ width: (n.battle.hpDisplay / maxHp(n)) * 100 + '%' }"
+            />
+          </div>
         </div>
       </div>
+    </section>
 
-      <div class="fighter enemy">
-        <h2>{{ enemy.name }}</h2>
-        <p>❤️ HP: {{ enemy.hp }}</p>
+    <!-- ENEMIES -->
+    <section class="side">
+      <h2>Inimigos</h2>
+      <div class="cards">
+        <div
+          v-for="(e, i) in enemies"
+          :key="e.id"
+          class="card enemy"
+          :class="{ active: i === enemyIndex }"
+        >
+          <img :src="e.image" />
+          <h3>{{ e.name }}</h3>
+
+          <div class="bar hp">
+            <div
+              class="fill"
+              :style="{ width: (e.battle.hpDisplay / e.battle.maxHp) * 100 + '%' }"
+            />
+          </div>
+        </div>
       </div>
+    </section>
+
+    <!-- ACTIONS -->
+    <div class="actions">
+      <button @click="basicAttack" :disabled="turn !== 'player'">
+        Ataque Básico
+      </button>
+      <button
+        @click="ultimateAttack"
+        :disabled="turn !== 'player' || activePlayer?.battle.ultimateUsed"
+      >
+        ☄️ Ultimate
+      </button>
     </div>
 
-    <div class="log">
-      <p v-for="(l, i) in log" :key="i">{{ l }}</p>
-    </div>
+    <ul class="log">
+      <li v-for="(m, i) in log" :key="i">{{ m }}</li>
+    </ul>
   </div>
 </template>
 
 <style scoped>
 .battle {
-  max-width: 900px;
+  max-width: 1100px;
   margin: auto;
-  padding: 24px;
+  padding: 20px;
   color: #e5e7eb;
 }
 
-.arena {
+.side {
+  margin-bottom: 30px;
+}
+
+.cards {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.fighter {
-  background: #020617;
-  padding: 20px;
-  border-radius: 16px;
-  width: 45%;
+.card {
+  background: radial-gradient(circle at top, #1e293b, #020617);
+  border-radius: 14px;
+  padding: 14px;
+  width: 180px;
+  text-align: center;
+  box-shadow: 0 0 10px #f97316;
+  opacity: 0.5;
+  transition: transform 0.3s, opacity 0.3s;
 }
 
-.enemy {
-  opacity: 0.9;
+.card.active {
+  opacity: 1;
+  transform: scale(1.05);
+  box-shadow: 0 0 18px #fb923c;
 }
 
-.jutsus button {
-  display: block;
-  width: 100%;
+.card img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+.bar {
+  height: 8px;
+  background: #334155;
+  border-radius: 6px;
+  overflow: hidden;
   margin-top: 8px;
-  padding: 8px;
-  background: #38bdf8;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
 }
 
-button:disabled {
-  background: #475569;
-  cursor: not-allowed;
+.bar.hp .fill {
+  background: #ef4444;
+  height: 100%;
 }
 
-.log {
-  background: #0f172a;
-  padding: 16px;
-  border-radius: 12px;
-  max-height: 200px;
-  overflow-y: auto;
+.actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin: 20px 0;
 }
 </style>

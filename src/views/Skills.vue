@@ -12,7 +12,7 @@ const selectedSkillId = ref("");
    LOAD GARANTIDO
 ===================== */
 onMounted(async () => {
-  if (store.ninjas.length === 0) {
+  if (!store.loading && store.ninjas.length === 0) {
     await store.fetchNinjas();
   }
 });
@@ -25,7 +25,9 @@ const selectedNinja = computed(() =>
 );
 
 const selectedSkill = computed(() =>
-  SKILLS.find(s => s.id === selectedSkillId.value)
+  Object.values(SKILLS).find(
+    s => s.id === selectedSkillId.value
+  )
 );
 
 const canLearn = computed(() => {
@@ -33,7 +35,7 @@ const canLearn = computed(() => {
 
   return (
     selectedNinja.value.skillPoints >= selectedSkill.value.cost &&
-    !selectedNinja.value.skills.some(s => s.id === selectedSkill.value.id)
+    !selectedNinja.value.skills.includes(selectedSkill.value.id)
   );
 });
 
@@ -43,18 +45,7 @@ const canLearn = computed(() => {
 function learnSkill() {
   if (!canLearn.value) return;
 
-  selectedNinja.value.skills.push(selectedSkill.value);
-
-  Object.entries(selectedSkill.value.bonus).forEach(([key, value]) => {
-    selectedNinja.value.stats[key] += value;
-  });
-
-  selectedNinja.value.skillPoints -= selectedSkill.value.cost;
-
-  alert(
-    `✅ ${selectedNinja.value.name} aprendeu ${selectedSkill.value.name}!`
-  );
-
+  store.learnSkill(selectedNinja.value, selectedSkill.value);
   selectedSkillId.value = "";
 }
 </script>
@@ -69,8 +60,22 @@ function learnSkill() {
       <!-- SELECT NINJA -->
       <div class="box">
         <h3>Ninja</h3>
-        <select v-model="selectedNinjaId">
-          <option disabled value="">Selecione um ninja</option>
+        <select
+          v-model="selectedNinjaId"
+          :disabled="store.ninjas.length === 0"
+        >
+          <option disabled value="">
+            Selecione um ninja
+          </option>
+
+          <option
+            v-if="store.ninjas.length === 0"
+            disabled
+            value=""
+          >
+            Nenhum ninja carregado
+          </option>
+
           <option
             v-for="ninja in store.ninjas"
             :key="ninja.id"
@@ -85,14 +90,15 @@ function learnSkill() {
       <div class="box" v-if="selectedNinja">
         <h3>Habilidade</h3>
         <select v-model="selectedSkillId">
-          <option disabled value="">Selecione uma skill</option>
+          <option disabled value="">
+            Selecione uma skill
+          </option>
+
           <option
-            v-for="skill in SKILLS"
+            v-for="skill in Object.values(SKILLS)"
             :key="skill.id"
             :value="skill.id"
-            :disabled="
-              selectedNinja.skills.some(s => s.id === skill.id)
-            "
+            :disabled="selectedNinja.skills.includes(skill.id)"
           >
             {{ skill.name }} ({{ skill.cost }} SP)
           </option>
@@ -111,7 +117,10 @@ function learnSkill() {
       <div class="box" v-if="selectedNinja">
         <h3>Status</h3>
         <ul>
-          <li v-for="(value, key) in selectedNinja.stats" :key="key">
+          <li
+            v-for="(value, key) in selectedNinja.stats"
+            :key="key"
+          >
             {{ key }}: {{ value }}
           </li>
         </ul>

@@ -10,7 +10,7 @@ import TeamBuilder from "@/views/TeamBuilder.vue";
 import Skills from "@/views/Skills.vue";
 
 const router = createRouter({
-  history: createWebHistory("/Naruto-Ninja-Ranker/"),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: "/", component: Home },
     { path: "/ranking", component: Ranking },
